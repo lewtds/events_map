@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: events_map
+      POSTGRES_USER: events_map
+      POSTGRES_PASSWORD: events_map
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U events_map"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nocodb:
+    image: nocodb/nocodb:latest
+    ports:
+      - "8081:8080"
+    environment:
+      NC_DB: "pg://db:5432?u=events_map&p=events_map&d=nocodb"
+      NC_ALLOW_LOCAL_EXTERNAL_DBS: "true"
+    volumes:
+      - nocodb_data:/usr/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  appsmith:
+    image: appsmith/appsmith-ce:latest
+    ports:
+      - "8082:80"
+      - "8083:443"
+    volumes:
+      - appsmith_data:/appsmith-stacks
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  nocodb_data:
+  appsmith_data:
